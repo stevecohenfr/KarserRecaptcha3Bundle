@@ -1,22 +1,37 @@
-<?php declare(strict_types=1);
+<?php
 
 namespace Karser\Recaptcha3Bundle\Services;
 
-use Symfony\Component\HttpFoundation\RequestStack;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpKernel\KernelInterface;
 
 final class IpResolver implements IpResolverInterface
 {
-    /** @var RequestStack */
-    private $requestStack;
+    /** @var KernelInterface */
+    private $kernel;
 
-    public function __construct(RequestStack $requestStack)
+    /** @var Request */
+    private $request;
+
+    public function __construct(KernelInterface $kernel)
     {
-        $this->requestStack = $requestStack;
+        $this->kernel = $kernel;
+        $this->request = $this->getRequest();
     }
 
-    public function resolveIp(): ?string
+    public function getRequest()
     {
-        $request = $this->requestStack->getCurrentRequest();
+        if ($this->kernel->getContainer()->has('request')) {
+            $request = $this->kernel->getContainer()->get('request');
+        } else {
+            $request = Request::createFromGlobals();
+        }
+        return $request;
+    }
+
+    public function resolveIp()
+    {
+        $request = $this->request;
         if ($request === null) {
             return null;
         }

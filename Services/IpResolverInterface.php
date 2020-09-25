@@ -1,8 +1,8 @@
-<?php declare(strict_types=1);
+<?php
 
 namespace Karser\Recaptcha3Bundle\Services;
 
 interface IpResolverInterface
 {
-    public function resolveIp(): ?string;
+    public function resolveIp();
 }

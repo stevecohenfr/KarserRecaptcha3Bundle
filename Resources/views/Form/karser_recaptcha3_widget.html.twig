@@ -1,5 +1,5 @@
 {% block karser_recaptcha3_widget %}
-    {% apply spaceless %}
+    {% spaceless %}
         {%- set type = type|default('hidden') -%}
         {{ block('form_widget_simple') }}
 
@@ -16,5 +16,5 @@
             <script type="text/javascript" src="https://www.google.com/recaptcha/api.js?render={{ form.vars.site_key }}&onload=recaptchaCallback_{{ validJsId }}" async defer></script>
 
         {%- endif %}
-    {% endapply %}
+    {% endspaceless %}
 {% endblock %}

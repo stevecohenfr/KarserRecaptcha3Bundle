@@ -1,4 +1,4 @@
-<?php declare(strict_types=1);
+<?php
 
 namespace Karser\Recaptcha3Bundle\Validator\Constraints;
 
@@ -15,29 +15,29 @@ final class Recaptcha3Validator extends ConstraintValidator
     private $enabled;
     private $ipResolver;
 
-    public function __construct($recaptcha, bool $enabled, IpResolverInterface $ipResolver)
+    public function __construct($recaptcha, $enabled, IpResolverInterface $ipResolver)
     {
         $this->recaptcha = $recaptcha;
         $this->enabled = $enabled;
         $this->ipResolver = $ipResolver;
     }
 
-    public function validate($value, Constraint $constraint): void
+    public function validate($value, Constraint $constraint)
     {
         if ($value !== null && !is_scalar($value) && !(\is_object($value) && method_exists($value, '__toString'))) {
             throw new UnexpectedTypeException($value, 'string');
         }
         if (!$constraint instanceof Recaptcha3) {
-            throw new UnexpectedTypeException($constraint, Recaptcha3::class);
+            throw new UnexpectedTypeException($constraint, "Karser\Recaptcha3Bundle\Validator\Constraints\Recaptcha3");
         }
         if (!$this->enabled) {
             return;
         }
-        $value = null !== $value ? (string) $value : '';
+        $value = null !== $value ? $value : '';
         $this->validateCaptcha($value, $constraint);
     }
 
-    private function validateCaptcha(string $value, Recaptcha3 $constraint): void
+    private function validateCaptcha($value, Recaptcha3 $constraint)
     {
         if ($value === '') {
             $this->buildViolation($constraint->messageMissingValue, $value);
@@ -46,14 +46,14 @@ final class Recaptcha3Validator extends ConstraintValidator
         $ip = $this->ipResolver->resolveIp();
         $response = $this->recaptcha->verify($value, $ip);
         if (!$response->isSuccess()) {
-            $errorCodes = implode('; ', array_map([$this, 'getErrorMessage'], $response->getErrorCodes()));
+            $errorCodes = implode('; ', array_map(array($this, 'getErrorMessage'), $response->getErrorCodes()));
             $this->buildViolation($constraint->message, $value, $errorCodes);
         }
     }
 
-    private function getErrorMessage(string $errorCode): string
+    private function getErrorMessage($errorCode)
     {
-        $messages = [
+        $messages = array(
             'missing-input-secret' => 'The secret parameter is missing',
             'invalid-input-secret' => 'The secret parameter is invalid or malformed',
             'missing-input-response' => 'The response parameter is missing',
@@ -69,16 +69,68 @@ final class Recaptcha3Validator extends ConstraintValidator
             'hostname-mismatch' => 'Expected hostname did not match',
             'apk_package_name-mismatch' => 'Expected APK package name did not match',
             'action-mismatch' => 'Expected action did not match',
-        ];
-        return $messages[$errorCode] ?? $errorCode;
+        );
+        return array_key_exists($errorCode, $messages) ? $messages[$errorCode] : '';
     }
 
-    private function buildViolation(string $message, string $value, string $errorCodes = ''): void
+    private function buildViolation($message, $value, $errorCodes = '')
     {
-        $this->context->buildViolation($message)
-            ->setParameter('{{ value }}', $this->formatValue($value))
-            ->setParameter('{{ errorCodes }}', $this->formatValue($errorCodes))
-            ->setCode(Recaptcha3::INVALID_FORMAT_ERROR)
-            ->addViolation();
+        $this->context->addViolation($message, array(
+            '{{ value }}' => $this->formatValue($value),
+            '{{ errorCodes }}' => $this->formatValue($errorCodes),
+            null,
+            null,
+            Recaptcha3::INVALID_FORMAT_ERROR
+        ));
+    }
+
+    private function formatValue($value)
+    {
+        if ($value instanceof \DateTime) {
+            if (class_exists('IntlDateFormatter')) {
+                $formatter = new \IntlDateFormatter(\Locale::getDefault(), \IntlDateFormatter::MEDIUM, \IntlDateFormatter::SHORT, 'UTC');
+
+                return $formatter->format(new \DateTime(
+                    $value->format('Y-m-d H:i:s.u'),
+                    new \DateTimeZone('UTC')
+                ));
+            }
+
+            return $value->format('Y-m-d H:i:s');
+        }
+
+        if (\is_object($value)) {
+            if (method_exists($value, '__toString')) {
+                return $value->__toString();
+            }
+
+            return 'object';
+        }
+
+        if (\is_array($value)) {
+            return 'array';
+        }
+
+        if (\is_string($value)) {
+            return '"'.$value.'"';
+        }
+
+        if (\is_resource($value)) {
+            return 'resource';
+        }
+
+        if (null === $value) {
+            return 'null';
+        }
+
+        if (false === $value) {
+            return 'false';
+        }
+
+        if (true === $value) {
+            return 'true';
+        }
+
+        return (string) $value;
     }
 }

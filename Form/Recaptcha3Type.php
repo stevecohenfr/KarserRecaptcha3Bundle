@@ -1,4 +1,4 @@
-<?php declare(strict_types=1);
+<?php
 
 namespace Karser\Recaptcha3Bundle\Form;
 
@@ -7,6 +7,7 @@ use Symfony\Component\Form\Extension\Core\Type\HiddenType;
 use Symfony\Component\Form\FormInterface;
 use Symfony\Component\Form\FormView;
 use Symfony\Component\OptionsResolver\OptionsResolver;
+use Symfony\Component\OptionsResolver\OptionsResolverInterface;
 
 final class Recaptcha3Type extends AbstractType
 {
@@ -16,37 +17,37 @@ final class Recaptcha3Type extends AbstractType
     /** @var bool */
     private $enabled;
 
-    public function __construct(string $siteKey, bool $enabled)
+    public function __construct($siteKey, $enabled)
     {
         $this->siteKey = $siteKey;
         $this->enabled = $enabled;
     }
 
-    public function buildView(FormView $view, FormInterface $form, array $options): void
+    public function buildView(FormView $view, FormInterface $form, array $options)
     {
         $view->vars['site_key'] = $this->siteKey;
         $view->vars['enabled'] = $this->enabled;
         $view->vars['action_name'] = $options['action_name'];
-        $view->vars['script_nonce_csp'] = $options['script_nonce_csp'] ?? '';
+        $view->vars['script_nonce_csp'] = array_key_exists('script_nonce_csp', $options) ? $options['script_nonce_csp'] : '';
     }
 
-    public function getParent(): string
+    public function getParent()
     {
-        return HiddenType::class;
+        return 'hidden';
     }
 
-    public function getBlockPrefix(): string
+    public function setDefaultOptions(OptionsResolverInterface $resolver)
     {
-        return 'karser_recaptcha3';
-    }
-
-    public function configureOptions(OptionsResolver $resolver): void
-    {
-        $resolver->setDefaults([
+        $resolver->setDefaults(array(
             'mapped' => false,
             'site_key' => null,
             'action_name' => 'homepage',
-            'script_nonce_csp' => '',
-        ]);
+            'script_nonce_csp' => ''
+        ));
+    }
+
+    public function getName()
+    {
+        return 'karser_recaptcha3';
     }
 }
